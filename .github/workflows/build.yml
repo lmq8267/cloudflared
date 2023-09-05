@@ -40,7 +40,7 @@ jobs:
           git clone https://github.com/cloudflare/cloudflared -b ${{ needs.check.outputs.ver }} ../src
           cd ../src
           sudo apt-get remove upx-ucl
-          sudo apt-get install upx-ucl=3.95-a
+          sudo apt-get install upx=3.95-a
           curl -k -S -o /opt/src/strip --connect-timeout 10 --retry 3 https://cdn.jsdelivr.net/gh/lmq8267/cloudflared/strip
           chmod 777 /opt/src/strip
           GOOS=linux GOARCH=mipsle GOMIPS=softfloat make cloudflared
