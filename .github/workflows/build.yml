@@ -1,9 +1,15 @@
 name: Build and Release
 
 on:
+  release:
+    types: [published]
+  push:
+    branches: 
+     - master
   schedule:
-    - cron: '0 3 * * *'
-  workflow_dispatch:
+  - cron: 0 4 * * *
+  watch:
+    types: [started]
 
 jobs:
   check:
@@ -42,9 +48,10 @@ jobs:
           GOOS=linux GOARCH=mipsle GOMIPS=softfloat make cloudflared
           upx --lzma --best cloudflared
       - 
-        name: Release
-        uses: softprops/action-gh-release@v1
-        with:
+       name : Upload packages
+       uses: actions/upload-artifact@master
+       if: always()
+       with:
           tag_name: ${{ needs.check.outputs.ver }}
-          files: |
+          path: |
               ../src/cloudflar
