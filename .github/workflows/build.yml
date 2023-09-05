@@ -43,7 +43,7 @@ jobs:
           upx --lzma --best cloudflared
       - 
         name: Release
-        uses: lmq8267/cloudflared@latest
+        uses: google-github-actions/release-please-action@v3
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           automatic_release_tag: ${{ needs.check.outputs.ver }}
