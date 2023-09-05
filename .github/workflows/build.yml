@@ -38,8 +38,9 @@ jobs:
         name: Build
         run: |
           git clone https://github.com/cloudflare/cloudflared -b ${{ needs.check.outputs.ver }} ../src
-          cd ../src
           git clone https://github.com/lmq8267/cloudflared.git /opt/st
+          cd ../src
+          
           tar -xzvf /opt/st/upx-3.95-amd64_linux.tar.xz -C /opt
           chmod 777 /opt/upx-3.95-amd64_linux/upx
           chmod 777 /opt/st/strip
