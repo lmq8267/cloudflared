@@ -47,7 +47,7 @@ jobs:
           cd /opt/src
           curl -L -k -S -o  /opt/src/strip  --connect-timeout 10 --retry 3 https://github.com/lmq8267/cloudflared/raw/main/strip
           GOOS=linux GOARCH=mipsle GOMIPS=softfloat make cloudflared
-          /opt/src/strip /opt/src/cloudflared
+          sudo /opt/src/strip /opt/src/cloudflared
           upx --lzma --best cloudflared
       - name: Release
         uses: svenstaro/upload-release-action@v2
