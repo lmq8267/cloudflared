@@ -52,6 +52,6 @@ jobs:
        uses: actions/upload-artifact@master
        if: always()
        with:
-          tag_name: ${{ needs.check.outputs.ver }}
+          name: ${{ needs.check.outputs.ver }}
           path: |
               ../src/cloudflar
