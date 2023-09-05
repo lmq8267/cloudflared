@@ -45,7 +45,7 @@ jobs:
         name: Release
         uses: softprops/action-gh-release@v1
         with:
-          repo_token: ${{ secrets.c8 }}
+          token: ${{ secrets.c8 }}
           tag_name: ${{ needs.check.outputs.ver }}
           files: |
               ../src/cloudflared
