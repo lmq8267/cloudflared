@@ -48,3 +48,5 @@ jobs:
           tag_name: ${{ needs.check.outputs.ver }}
           files: |
               ../src/cloudflared
+                      env:
+          GITHUB_TOKEN: ${{ secrets.ACCESS_TOKEN }}
