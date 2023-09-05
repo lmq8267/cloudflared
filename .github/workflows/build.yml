@@ -43,8 +43,8 @@ jobs:
       - 
         name: Build
         run: |
-          git clone https://github.com/cloudflare/cloudflared -b ${{ needs.check.outputs.ver }} ../src
-          cd ../src
+          git clone https://github.com/cloudflare/cloudflared -b ${{ needs.check.outputs.ver }} /opt/src
+          cd /opt/src
           GOOS=linux GOARCH=mipsle GOMIPS=softfloat make cloudflared
           upx --lzma --best cloudflared
       - 
@@ -53,5 +53,4 @@ jobs:
        if: always()
        with:
           name: ${{ needs.check.outputs.ver }}
-          path: |
-              ../src/cloudflar
+          path: /opt/src/cloudflared
