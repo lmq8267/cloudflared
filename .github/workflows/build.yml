@@ -45,9 +45,6 @@ jobs:
         name: Release
         uses: softprops /action- gh-release@v1
         with:
-          #repo_token: ${{ secrets.GITHUB_TOKEN }}
-          #automatic_release_tag: ${{ needs.check.outputs.ver }}
-          #prerelease: false
           tag_name : ${{ need.check.outputs.ver }}
           files: |
               ../src/cloudflared
