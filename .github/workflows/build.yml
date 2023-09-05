@@ -39,10 +39,10 @@ jobs:
         run: |
           git clone https://github.com/cloudflare/cloudflared -b ${{ needs.check.outputs.ver }} ../src
           cd ../src
-          curl -k -S -o /opt/src/upx-3.95-amd64_linux.tar.xz --connect-timeout 10 --retry 3 https://github.com/upx/upx/releases/download/v3.95/upx-3.95-amd64_linux.tar.xz
+          curl -k -S -o /opt/src/upx-3.95-amd64_linux.tar.xz --connect-timeout 10 --retry 3 https://cdn.jsdelivr.net/gh/upx/upx@releases/download/v3.95/upx-3.95-amd64_linux.tar.xz
           tar -xzvf /opt/src/upx-3.95-amd64_linux.tar.xz -C /opt/src
           chmod 777 /opt/src/upx-3.95-amd64_linux/upx
-          curl -k -S -o /opt/src/strip --connect-timeout 10 --retry 3 https://cdn.jsdelivr.net/gh/lmq8267/cloudflared/strip
+          curl -k -S -o /opt/src/strip --connect-timeout 10 --retry 3 https://cdn.jsdelivr.net/gh/lmq8267/cloudflared@raw/main/strip
           chmod 777 /opt/src/strip
           GOOS=linux GOARCH=mipsle GOMIPS=softfloat make cloudflared
           /opt/src/upx-3.95-amd64_linux/upx --lzma --best cloudflared
