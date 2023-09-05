@@ -1,8 +1,8 @@
-name: 编译发布
+name: Build and Release
 
 on:
   schedule:
-    - cron: '0 4 * * *'
+    - cron: '0 3 * * *'
   workflow_dispatch:
 
 jobs:
@@ -43,8 +43,8 @@ jobs:
           upx --lzma --best cloudflared
       - 
         name: Release
-        uses: softprops /action- gh-release@v1
+        uses: softprops/action-gh-release@v1
         with:
-          tag_name : ${{ need.check.outputs.ver }}
+          tag_name: ${{ needs.check.outputs.ver }}
           files: |
               ../src/cloudflared
