@@ -1,0 +1,52 @@
+name: 编译发布
+
+on:
+  schedule:
+    - cron: '0 4 * * *'
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      ver: ${{ steps.getversion.outputs.ver }}
+      cver: ${{ steps.getversion.outputs.cver }}
+    steps:
+      -
+        name: Get version
+        id: getversion
+        run: |
+          ver=`curl https://api.github.com/repos/cloudflare/cloudflared/releases/latest | jq -r '.tag_name'`
+          cver=`curl https://api.github.com/repos/lmq8267/cloudflared/releases/latest | jq -r '.tag_name'`
+          echo "ver=${ver}" >> $GITHUB_OUTPUT
+          echo "cver=${cver}" >> $GITHUB_OUTPUT
+
+  build:
+    runs-on: ubuntu-latest
+    needs: check
+    if: ${{ needs.check.outputs.ver != needs.check.outputs.cver }}
+    steps:
+      - 
+        name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: 1.20.7
+      -
+        name: Checkout
+        uses: actions/checkout@v3
+      - 
+        name: Build
+        run: |
+          git clone https://github.com/cloudflare/cloudflared -b ${{ needs.check.outputs.ver }} ../src
+          cd ../src
+          GOOS=linux GOARCH=mipsle GOMIPS=softfloat make cloudflared
+          upx --lzma --best cloudflared
+      - 
+        name: Release
+        uses: lmq8267/action-automatic-releases@latest
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          automatic_release_tag: ${{ needs.check.outputs.ver }}
+          prerelease: false
+          files: |
+              ../src/cloudflared
