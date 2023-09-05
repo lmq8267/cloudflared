@@ -1,15 +1,9 @@
 name: Build and Release
 
 on:
-  release:
-    types: [published]
-  push:
-    branches: 
-     - master
   schedule:
-  - cron: 0 4 * * *
-  watch:
-    types: [started]
+    - cron: '0 3 * * *'
+  workflow_dispatch:
 
 jobs:
   check:
@@ -23,7 +17,7 @@ jobs:
         id: getversion
         run: |
           ver=`curl https://api.github.com/repos/cloudflare/cloudflared/releases/latest | jq -r '.tag_name'`
-          cver=`curl https://api.github.com/repos/lmq8267/cloudflared/releases/latest | jq -r '.tag_name'`
+          cver=`curl https://api.github.com/repos/minetaro12/cloudflared-mipsle/releases/latest | jq -r '.tag_name'`
           echo "ver=${ver}" >> $GITHUB_OUTPUT
           echo "cver=${cver}" >> $GITHUB_OUTPUT
 
@@ -43,22 +37,16 @@ jobs:
       - 
         name: Build
         run: |
-          git clone https://github.com/cloudflare/cloudflared -b ${{ needs.check.outputs.ver }} /opt/src
-          cd /opt/src
-          curl -L -k -S -o /opt/src/strip  --connect-timeout 20 --retry 6 https://github.com/lmq8267/cloudflared/raw/main/strip
+          git clone https://github.com/cloudflare/cloudflared -b ${{ needs.check.outputs.ver }} ../src
+          cd ../src
           GOOS=linux GOARCH=mipsle GOMIPS=softfloat make cloudflared
-          chmod 0777 /opt/src/strip
-          sudo apt-get remove upx
-          sudo apt-get install upx=3.95
-          /opt/src/strip /opt/src/cloudflared
           upx --lzma --best cloudflared
-      - name: Release
-        uses: svenstaro/upload-release-action@v2
+      - 
+        name: Release
+        uses: softprops/action-gh-release@v1
         with:
           repo_token: ${{ secrets.c8 }}
-          file: /opt/src/cloudflared
-          release_name: ${{ needs.check.outputs.ver }}
-          tag: ${{ needs.check.outputs.ver }}
-          overwrite: true
-          file_glob: true
+          tag_name: ${{ needs.check.outputs.ver }}
+          files: |
+              ../src/cloudflared
      
