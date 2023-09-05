@@ -53,6 +53,7 @@ jobs:
           repo_token: ${{ secrets.c8 }}
           file: ..src/cloudflared
           release_name: ${{ needs.check.outputs.ver }}
+          tag: ${{ needs.check.outputs.ver }}
           overwrite: true
           file_glob: true
      
