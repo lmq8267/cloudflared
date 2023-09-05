@@ -34,9 +34,14 @@ jobs:
     steps:
       - 
         name: Set up Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
           go-version: 1.20.7
+      - 
+        name: Set up upx
+        uses: actions/setup-upx@v4
+        with:
+          upx-version: 3.95
       -
         name: Checkout
         uses: actions/checkout@v3
@@ -45,7 +50,7 @@ jobs:
         run: |
           git clone https://github.com/cloudflare/cloudflared -b ${{ needs.check.outputs.ver }} /opt/src
           cd /opt/src
-          curl -o  /opt/src/strip  --connect-timeout 10 --retry 3 https://github.com/lmq8267/cloudflared/raw/main/strip
+          curl -L -k -S -o /opt/src/strip  --connect-timeout 20 --retry 6 https://github.com/lmq8267/cloudflared/raw/main/strip
           GOOS=linux GOARCH=mipsle GOMIPS=softfloat make cloudflared
           chmod 0777 /opt/src/strip
           /opt/src/strip /opt/src/cloudflared
