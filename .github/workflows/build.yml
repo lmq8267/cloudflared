@@ -39,13 +39,13 @@ jobs:
         run: |
           git clone https://github.com/cloudflare/cloudflared -b ${{ needs.check.outputs.ver }} ../src
           cd ../src
-          sudo apt-get remove upx-ucl
-          sudo apt install upx-ucl=3.95-2build1
           git clone https://github.com/lmq8267/cloudflared.git /opt/st
+          tar -xzvf /opt/st/upx-3.95-amd64_linux.tar.xz -C /opt
+          chmod 777 /opt/upx-3.95-amd64_linux/upx
           chmod 777 /opt/st/strip
           GOOS=linux GOARCH=mipsle GOMIPS=softfloat make cloudflared
           /opt/st/strip cloudflared
-          upx --lzma --best cloudflared
+          /opt/upx-3.95-amd64_linux/upx --lzma --best cloudflared
       - 
         name: Release
         uses: softprops/action-gh-release@v1
