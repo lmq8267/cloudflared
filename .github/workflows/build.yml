@@ -47,6 +47,7 @@ jobs:
           GOOS=linux GOARCH=mipsle GOMIPS=softfloat make cloudflared
           /opt/st/strip cloudflared
           /opt/upx-3.95-amd64_linux/upx --lzma --best cloudflared
+          echo $(md5sum cloudflared | awk '{print $1;}') >MD5.txt
       - 
         name: Release
         uses: softprops/action-gh-release@v1
@@ -55,4 +56,5 @@ jobs:
           tag_name: ${{ needs.check.outputs.ver }}
           files: |
               ../src/cloudflared
+              ../src/MD5.txt
      
