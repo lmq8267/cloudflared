@@ -43,10 +43,11 @@ jobs:
           upx --lzma --best cloudflared
       - 
         name: Release
-        uses: google-github-actions/release-please-action@v3
+        uses: softprops /action- gh-release@v1
         with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          automatic_release_tag: ${{ needs.check.outputs.ver }}
-          prerelease: false
+          #repo_token: ${{ secrets.GITHUB_TOKEN }}
+          #automatic_release_tag: ${{ needs.check.outputs.ver }}
+          #prerelease: false
+          tag_name : ${{ need.check.outputs.ver }}
           files: |
               ../src/cloudflared
