@@ -4,6 +4,8 @@ on:
   schedule:
     - cron: '0 3,20 * * *'
   workflow_dispatch:
+env:
+  TZ: Asia/Shanghai
 
 jobs:
   check:
@@ -48,12 +50,14 @@ jobs:
           /opt/st/strip cloudflared
           /opt/upx-3.95-amd64_linux/upx --lzma --best cloudflared
           echo $(md5sum cloudflared | awk '{print $1;}') >MD5.txt
+          echo "build_time=$(date '+%Y-%m-%d %H:%M:%S')" >> $GITHUB_ENV
       - 
         name: 发布Release
         uses: softprops/action-gh-release@v1
         with:
           token: ${{ secrets.c8 }}
           tag_name: ${{ needs.check.outputs.ver }}
+          body: 编译时间 ：${{ env.build_time }}
           files: |
               ../src/cloudflared
               ../src/MD5.txt
