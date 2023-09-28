@@ -57,7 +57,10 @@ jobs:
         with:
           token: ${{ secrets.c8 }}
           tag_name: ${{ needs.check.outputs.ver }}
-          body: 编译时间 ：${{ env.build_time }}
+          body: |
+           > ### 编译时间 ：${{ env.build_time }}
+
+           **[官方更新说明](https://github.com/cloudflare/cloudflared/releases)**
           files: |
               ../src/cloudflared
               ../src/MD5.txt
