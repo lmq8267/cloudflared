@@ -47,6 +47,7 @@ jobs:
           tar -xvf /opt/st/upx-3.95-amd64_linux.tar.xz -C /opt
           chmod 777 /opt/upx-3.95-amd64_linux/upx
           chmod 777 /opt/st/strip
+          sed -i "s|-ldflags='|-ldflags=' -s -w |g" ./Makefile
           GOOS=linux GOARCH=mipsle GOMIPS=softfloat make cloudflared
           /opt/st/strip cloudflared
           /opt/upx-3.95-amd64_linux/upx --lzma --best cloudflared
