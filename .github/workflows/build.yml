@@ -37,24 +37,28 @@ jobs:
         uses: actions/setup-go@v4
         with:
           go-version: ${{ env.gotag }}
-      - 
-        name: 编译
+      - name: 安装 UPX
+        uses: crazy-max/ghaction-upx@v3
+        with:
+          version: latest
+          install-only: true
+      - name: 编译
         run: |
           git clone https://github.com/cloudflare/cloudflared -b ${{ needs.check.outputs.ver }} ../src
-          git clone https://github.com/lmq8267/cloudflared.git /opt/st
           cd ../src
           sudo timedatectl set-timezone "Asia/Shanghai"
-          tar -xvf /opt/st/upx-3.95-amd64_linux.tar.xz -C /opt
-          chmod 777 /opt/upx-3.95-amd64_linux/upx
-          chmod 777 /opt/st/strip
           sed -i "s|-ldflags='|-ldflags=' -s -w |g" ./Makefile
           GOOS=linux GOARCH=mipsle GOMIPS=softfloat make cloudflared
-          /opt/st/strip cloudflared
-          /opt/upx-3.95-amd64_linux/upx --lzma --best cloudflared
+          upx --lzma --best cloudflared
+          mkdir -p ./bin
+          mv -f ./cloudflared /bin/cloudflared
+          go clean
+          GOOS=freebsd GOARCH=amd64 make cloudflared
+          mv -f ./cloudflared /bin/cloudflared-freebsd-x86-64
+          cd ./bin
           echo $(md5sum cloudflared | awk '{print $1;}') >MD5.txt
           echo "build_time=$(date '+%Y-%m-%d %H:%M:%S')" >> $GITHUB_ENV
-      - 
-        name: 发布Release
+      - name: 发布Release
         uses: softprops/action-gh-release@v1
         with:
           token: ${{ secrets.c8 }}
@@ -64,12 +68,21 @@ jobs:
 
            **[官方更新说明](https://github.com/cloudflare/cloudflared/releases)**
           files: |
-              ../src/cloudflared
-              ../src/MD5.txt
-      - 
-       name: 删除工作流
-       uses: GitRML/delete-workflow-runs@main
-       with:
-        token: ${{ secrets.c8 }}
-        retain_days: 2
-        keep_minimum_runs: 0
+              ../src/bin/*
+      - name: 删除工作流
+        uses: GitRML/delete-workflow-runs@main
+        with:
+         token: ${{ secrets.c8 }}
+         retain_days: 2
+         keep_minimum_runs: 0
+  keepalive-workflow:
+    # github超过60天未提交将自动停止工作流
+    name: 工作流保活 
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: gautamkrishnar/keepalive-workflow@v2
+        #with:
+          #use_api: true
