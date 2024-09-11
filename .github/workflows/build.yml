@@ -51,10 +51,10 @@ jobs:
           GOOS=linux GOARCH=mipsle GOMIPS=softfloat make cloudflared
           upx --lzma --best cloudflared
           mkdir -p ./bin
-          mv -f ./cloudflared /bin/cloudflared
+          mv -f ./cloudflared ./bin/cloudflared
           go clean
           GOOS=freebsd GOARCH=amd64 make cloudflared
-          mv -f ./cloudflared /bin/cloudflared-freebsd-x86-64
+          mv -f ./cloudflared ./bin/cloudflared-freebsd-x86-64
           cd ./bin
           echo $(md5sum cloudflared | awk '{print $1;}') >MD5.txt
           echo "build_time=$(date '+%Y-%m-%d %H:%M:%S')" >> $GITHUB_ENV
