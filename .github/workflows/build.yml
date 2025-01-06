@@ -16,14 +16,19 @@ jobs:
       ver: ${{ steps.getversion.outputs.ver }}
       cver: ${{ steps.getversion.outputs.cver }}
     steps:
-      -
-        name: 检查版本
+      - name: 检查版本
         id: getversion
         run: |
           ver=`curl https://api.github.com/repos/cloudflare/cloudflared/releases/latest | jq -r '.tag_name'`
           cver=`curl https://api.github.com/repos/${{ github.repository }}/releases/latest | jq -r '.tag_name'`
           echo "ver=${ver}" >> $GITHUB_OUTPUT
           echo "cver=${cver}" >> $GITHUB_OUTPUT
+      - name: delete-workflow
+        uses: Mattraks/delete-workflow-runs@main
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          retain_days: 0
+          keep_minimum_runs: 0
 
   build:
     runs-on: ubuntu-latest
@@ -68,15 +73,11 @@ jobs:
           body: |
            > ### 编译时间 ：${{ env.build_time }}
 
+           **这是mipsel架构的**
+
            **[官方更新说明](https://github.com/cloudflare/cloudflared/releases)**
           files: |
               ../src/bin/*
-      - name: 删除工作流
-        uses: Mattraks/delete-workflow-runs@main
-        with:
-         token: ${{ secrets.GITHUB_TOKEN }}
-         retain_days: 0
-         keep_minimum_runs: 0
   keepalive-workflow:
     # github超过60天未提交将自动停止工作流
     name: 工作流保活 
