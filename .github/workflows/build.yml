@@ -47,7 +47,7 @@ jobs:
       - name: 安装 UPX
         uses: crazy-max/ghaction-upx@v3
         with:
-          version: latest
+          version: v4.2.4
           install-only: true
       - name: 编译
         run: |
