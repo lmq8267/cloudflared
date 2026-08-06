@@ -54,17 +54,35 @@ jobs:
           git clone https://github.com/cloudflare/cloudflared -b ${{ needs.check.outputs.ver }} ../src
           cd ../src
           sudo timedatectl set-timezone "Asia/Shanghai"
+          sed -i 's/^go .*/go 1.25/' go.mod
           sed -i "s|-ldflags='|-ldflags=' -s -w |g" ./Makefile
-          GOOS=linux GOARCH=mipsle GOMIPS=softfloat make cloudflared
+          # cloudflared 2026.7+ 用了 Go1.26 的 new(expr) 语法，降级到 Go1.25 后编译不过，改写为兼容写法
+          perl -i -pe 's/^(\t*)return new\(connection\.QUIC\)/$1quic := connection.QUIC\n$1return \&quic/' prechecks/checker.go
+          perl -i -pe 's/^(\t*)return new\(connection\.HTTP2\)/$1http2 := connection.HTTP2\n$1return \&http2/' prechecks/checker.go
+          CGO_ENABLED=0 GOOS=linux GOARCH=mipsle GOMIPS=softfloat make cloudflared
           upx --lzma --best cloudflared
           mkdir -p ./bin
           mv -f ./cloudflared ./bin/cloudflared
           #go clean
-          #GOOS=freebsd GOARCH=amd64 make cloudflared
+          #CGO_ENABLED=0 GOOS=freebsd GOARCH=amd64 make cloudflared
           #mv -f ./cloudflared ./bin/cloudflared-freebsd-x86-64
           cd ./bin
           echo $(md5sum cloudflared | awk '{print $1;}') >MD5.txt
           echo "build_time=$(date '+%Y年%m月%d日%H:%M:%S' | jq -sRr @uri)" >> $GITHUB_ENV
+      - name: qemu-mipsel 运行测试
+        run: |
+          # 系统自带 qemu 4.2 对 mips 上 Go 的实时信号支持不完整(sigaction failed)，改用 newqemu 7.2 已验证可跑
+          curl -sL -o /tmp/qemu-mipsel-static "https://github.com/multiarch/qemu-user-static/releases/download/v7.2.0-1/qemu-mipsel-static"
+          chmod +x /tmp/qemu-mipsel-static
+          cd ../src/bin
+          echo "===== cloudflared -h (qemu-mipsel) ====="
+          if ! /tmp/qemu-mipsel-static ./cloudflared -h > /tmp/help.txt 2>&1; then
+            echo "::error::qemu-mipsel 运行 cloudflared -h 失败"
+            cat /tmp/help.txt
+            exit 1
+          fi
+          cat /tmp/help.txt
+          grep -q "cloudflared" /tmp/help.txt || { echo "::error::cloudflared -h 输出异常"; exit 1; }
       - name: 发布Release
         uses: softprops/action-gh-release@v2
         with:
