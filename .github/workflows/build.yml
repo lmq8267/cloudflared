@@ -1,10 +1,14 @@
-name: 编译发布
+name: 编译mipsel版cloudflared
 
 on:
   schedule:
-    - cron: '0 4 * * *'
+    - cron: '0 3 * * *'
   workflow_dispatch:
-
+env:
+  TZ: Asia/Shanghai
+permissions:
+  contents: write
+  actions: write
 jobs:
   check:
     runs-on: ubuntu-latest
@@ -12,41 +16,128 @@ jobs:
       ver: ${{ steps.getversion.outputs.ver }}
       cver: ${{ steps.getversion.outputs.cver }}
     steps:
-      -
-        name: Get version
+      - name: 检查版本
         id: getversion
         run: |
           ver=`curl https://api.github.com/repos/cloudflare/cloudflared/releases/latest | jq -r '.tag_name'`
-          cver=`curl https://api.github.com/repos/lmq8267/cloudflared/releases/latest | jq -r '.tag_name'`
+          cver=`curl https://api.github.com/repos/${{ github.repository }}/releases/latest | jq -r '.tag_name'`
           echo "ver=${ver}" >> $GITHUB_OUTPUT
           echo "cver=${cver}" >> $GITHUB_OUTPUT
+      - name: delete-workflow
+        uses: Mattraks/delete-workflow-runs@main
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          retain_days: 0
+          keep_minimum_runs: 0
 
   build:
     runs-on: ubuntu-latest
     needs: check
     if: ${{ needs.check.outputs.ver != needs.check.outputs.cver }}
     steps:
-      - 
-        name: Set up Go
-        uses: actions/setup-go@v4
+      - name: 获取最新Go
+        run: |
+          latest_version=$(curl -L -k -s https://golang.org/dl/?mode=json | grep -m 1 -o '"version": "[^"]*' | sed 's/"version": "//' | tr -d 'go" ')
+          echo "go版本=$latest_version"
+          echo "gotag=$latest_version" >> $GITHUB_ENV
+      - name: 安装go
+        uses: actions/setup-go@main
         with:
-          go-version: 1.20.7
-      -
-        name: Checkout
-        uses: actions/checkout@v3
-      - 
-        name: Build
+          go-version: 1.25.7 # ${{ env.gotag }}
+      - name: 安装 UPX
+        uses: crazy-max/ghaction-upx@master
+        with:
+          version: v4.2.4
+          install-only: true
+      - name: 编译
         run: |
           git clone https://github.com/cloudflare/cloudflared -b ${{ needs.check.outputs.ver }} ../src
           cd ../src
-          GOOS=linux GOARCH=mipsle GOMIPS=softfloat make cloudflared
+          sudo timedatectl set-timezone "Asia/Shanghai"
+          sed -i 's/^go .*/go 1.25/' go.mod
+          sed -i "s|-ldflags='|-ldflags=' -s -w |g" ./Makefile
+          # cloudflared 2026.7+ 新版用了 Go1.26 的 new(expr) 语法，降级到 Go1.25 后编译不过，改写为兼容写法
+          perl -i -pe 's/^(\t*)return new\(connection\.QUIC\)/$1quic := connection.QUIC\n$1return \&quic/' prechecks/checker.go
+          perl -i -pe 's/^(\t*)return new\(connection\.HTTP2\)/$1http2 := connection.HTTP2\n$1return \&http2/' prechecks/checker.go
+          CGO_ENABLED=0 GOOS=linux GOARCH=mipsle GOMIPS=softfloat make cloudflared
           upx --lzma --best cloudflared
-      - 
-        name: Release
-        uses: lmq8267/action-automatic-releases@latest
+          mkdir -p ./bin
+          mv -f ./cloudflared ./bin/cloudflared
+          
+          #go clean
+          #CGO_ENABLED=0 GOOS=freebsd GOARCH=amd64 make cloudflared
+          #mv -f ./cloudflared ./bin/cloudflared-freebsd-x86-64
+          
+          go clean
+          CGO_ENABLED=0 GOOS=linux GOARCH=mips GOMIPS=softfloat make cloudflared
+          upx --lzma --best cloudflared
+          mv -f ./cloudflared ./bin/cloudflared-mips
+          
+          cd ./bin
+          echo $(md5sum cloudflared | awk '{print $1;}') >MD5.txt
+          echo "build_time=$(date '+%Y年%m月%d日%H:%M:%S' | jq -sRr @uri)" >> $GITHUB_ENV
+      - name: qemu-mipsel 运行测试
+        run: |
+          # 系统自带 qemu 4.2 可能对 mipsel 上 Go 的实时信号支持不完整(sigaction failed)，改用 newqemu 7.2 来测试
+          curl -sL -o /tmp/qemu-mipsel-static "https://github.com/multiarch/qemu-user-static/releases/download/v7.2.0-1/qemu-mipsel-static"
+          chmod +x /tmp/qemu-mipsel-static
+          cd ../src/bin
+          echo "===== cloudflared -h (qemu-mipsel) ====="
+          if ! /tmp/qemu-mipsel-static ./cloudflared -h > /tmp/help.txt 2>&1; then
+            echo "::error::qemu-mipsel 运行 cloudflared -h 失败"
+            cat /tmp/help.txt
+            exit 1
+          fi
+          cat /tmp/help.txt
+          grep -q "cloudflared" /tmp/help.txt || { echo "::error::cloudflared -h 输出异常"; exit 1; }
+      - name: 发布Release
+        uses: lmq8267/action-gh-release@master
         with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          automatic_release_tag: ${{ needs.check.outputs.ver }}
-          prerelease: false
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag_name: ${{ needs.check.outputs.ver }}
+          body: |
+           > ### ![](https://img.shields.io/badge/%E7%BC%96%E8%AF%91%E6%97%B6%E9%97%B4-${{ env.build_time }}-8267?logo=github&labelColor=%E9%A1%BB)![](https://img.shields.io/github/downloads/${{ github.repository }}/${{ needs.check.outputs.ver }}/total?label=%E4%B8%8B%E8%BD%BD%E6%AC%A1%E6%95%B0&logo=github)
+
+           **这是mipsel架构的，并且已使用4.2.4版本的UPX压缩体积**
+
+           **[官方更新说明](https://github.com/cloudflare/cloudflared/releases)**
+           
+           | 程序 | 架构 |
+           |---|---|
+           | [cloudflared](https://github.com/${{ github.repository }}/releases/download/${{ needs.check.outputs.ver }}/cloudflared) | mipsle |
+           | [cloudflared-mips](https://github.com/${{ github.repository }}/releases/download/${{ needs.check.outputs.ver }}/cloudflared-mips) | mips |
+           
           files: |
-              ../src/cloudflared
+              ../src/bin/*
+  keepalive-workflow:
+    # github超过60天未提交将自动停止工作流
+    name: 工作流保活 
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+      contents: write
+    steps:
+      - uses: actions/checkout@main
+      #- uses: gautamkrishnar/keepalive-workflow@v2
+        #with:
+          #use_api: true
+      - name: 检查上次提交日期
+        id: check_commit_date
+        run: |
+          # 获取上次提交日期（格式：YYYY-MM-DD）
+          LAST_COMMIT_DATE=$(git log -1 --format=%cd --date=short)
+          echo "上次提交日期: $LAST_COMMIT_DATE"
+          # 计算当前日期和上次提交日期的差值（单位：天）
+          LAST_COMMIT_TIMESTAMP=$(date -d "$LAST_COMMIT_DATE" +%s)
+          CURRENT_TIMESTAMP=$(date +%s)
+          DIFF_DAYS=$(( (CURRENT_TIMESTAMP - LAST_COMMIT_TIMESTAMP) / 86400 ))
+          echo "距离上次提交以来的天数: $DIFF_DAYS"
+          echo "diff_days=$DIFF_DAYS" >> $GITHUB_ENV
+      - name: 执行空提交
+        if: ${{ env.diff_days > 50 }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          # 创建空提交
+          git commit --allow-empty -m "自动空提交，保持仓库活跃"
+          git push
